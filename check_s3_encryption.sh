@@ -41,7 +41,7 @@ fi
 if [ "$report" -eq "1" ]; then
    echo
    echo "total buckets=$total"
-   echo "total unencypted buckets=$total_unenc"
+   echo "total unencrypted buckets=$total_unenc"
    echo "percent unencrypted=$pct_unenc%"
 fi
 
