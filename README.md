@@ -15,6 +15,9 @@ test,ret=255
 total buckets=10
 total unencypted buckets=1
 percent unencrypted=10%
+
+echo $?
+1
 ```
 
 daily crontab entry:
