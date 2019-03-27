@@ -7,12 +7,20 @@ Check for AWS S3 buckets that are not encrypted and print a report in CSV format
 **Usage**
 
 CLI:
-
+```
 $ check-s3-encryption.sh
 
-daily crontab entry:
+test,ret=255
 
+total buckets=10
+total unencypted buckets=1
+percent unencrypted=10%
+```
+
+daily crontab entry:
+```
 1 1 * * * check-s3-encryption.sh
+```
 
 **Requirements**
 
