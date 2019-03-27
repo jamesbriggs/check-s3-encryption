@@ -34,11 +34,11 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
    sleep 1 # rate-limiting to avoid AWS API throttling (optional)
 done
 
-if [ "$total" -ne "0" ]; then
-   pct_unenc=$((100 * total_unenc / $total))
-fi
-
 if [ "$report" -eq "1" ]; then
+   if [ "$total" -ne "0" ]; then
+      pct_unenc=$((100 * total_unenc / $total))
+   fi
+
    echo
    echo "total buckets=$total"
    echo "total unencrypted buckets=$total_unenc"
