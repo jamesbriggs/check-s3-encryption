@@ -2,7 +2,7 @@
 
 **Description**
 
-Check for AWS S3 buckets that are not encrypted and print a report in CSV format and exit with status.
+Check for AWS S3 buckets that are not encrypted and optionally encrypt them with SSE AES256, print a report in CSV format and exit with status.
 
 **Usage**
 
@@ -29,6 +29,7 @@ daily crontab entry:
 
 * AWS CLI tools must be installed and reachable via $PATH
 * ~/.aws must be configured with config and credentials files
+* s3cmd is needed if you enable encryption
 * tested on Linux and Mac OS X
 
 **License**
