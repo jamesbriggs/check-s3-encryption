@@ -37,8 +37,10 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
          sz=`s3cmd du s3://$i | cut -f1 -d ' '`
          if [ "$sz" -lt "$max_encrypt" ]; then
              echo "encrypting $i $sz bytes ..."
+             # mark bucket as an encrypted bucket
              aws s3api put-bucket-encryption --bucket $i \
                 --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+             # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
              aws s3 cp s3://$i/ s3://$i/ --recursive --sse
          fi
       fi
