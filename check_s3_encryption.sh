@@ -79,8 +79,14 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
              # mark bucket as an encrypted bucket
              aws s3api put-bucket-encryption --bucket $i \
                 --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
-             # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
-             aws s3 cp s3://$i/ s3://$i/ --recursive --sse
+             if [[ "$?" -eq "0" ]]; then
+                # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
+                aws s3 cp s3://$i/ s3://$i/ --recursive --sse
+                if [[ "$?" -ne "0" ]]; then
+                   echo "error: bucket self-copy failed. You must run it manually: aws s3 cp s3://$i/ s3://$i/ --recursive --sse"
+                   echo "info: continuing to next bucket ..."
+                fi
+             fi
          fi
       fi
 
