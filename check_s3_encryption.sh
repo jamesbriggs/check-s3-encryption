@@ -7,7 +7,10 @@
 # Env: bash
 # Usage: check_s3_encryption.sh
 # Link: https://github.com/jamesbriggs/check-s3-encryption
-# Warning: "Copying the object over itself removes settings for storage-class and website-redirect-location. To maintain these settings in the new object, be sure to explicitly specify storage-class or website-redirect-location values in the copy request."
+# Warning from AWS when using encryption feature:
+#    "Copying the object over itself removes settings for storage-class and website-redirect-location.
+#    To maintain these settings in the new object, be sure to explicitly specify storage-class or 
+#    website-redirect-location values in the copy request."
 # Note: if report=1 (see below), the unencrypted buckets report is printed in CSV format
 
 ###
@@ -18,7 +21,9 @@ report=1 # print summary report
 
 delay=1 # throttling interval between buckets (seconds)
 
-bash4=1 # only needed for blacklist feature. On Mac OS X, do `brew install bash` and update the shebang line at top of script to /usr/local/bin/bash if you need a blacklist.
+# bash4 is only needed for blacklist feature.
+# On Mac OS X, do `brew install bash` and update the shebang line at top of script to /usr/local/bin/bash if you need a blacklist.
+bash4=1
 
 encrypt=0
 max_encrypt=1000000000 # bytes
