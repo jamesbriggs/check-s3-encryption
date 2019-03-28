@@ -3,6 +3,7 @@
 # Program: check_s3_encryption.sh
 # Purpose: check for unencrypted AWS S3 buckets and report and/or return exit status
 # Author: James Briggs, USA
+# Version: 1.0
 # Env: bash
 # Usage: check_s3_encryption.sh
 # Link: https://github.com/jamesbriggs/check-s3-encryption
@@ -12,7 +13,10 @@
 ### start of user settings
 ###
 
-report=1
+report=1 # print summary report
+
+bash4=1 # only needed for blacklist feature. On Mac OS X, do `brew install bash` and update the shebang line at top of script to /usr/local/bin/bash if you need a blacklist.
+
 encrypt=0
 max_encrypt=1000000000 # bytes
 
@@ -20,15 +24,50 @@ max_encrypt=1000000000 # bytes
 ### end of user settings
 ###
 
+trap "echo Exited!; exit;" SIGINT SIGTERM
+
+cmd_out=`aws --version`
+if ! [[ $cmd_out =~ aws-cli ]]; then
+   echo "error: aws cli not installed"
+   exit 1
+fi
+
+if [[ "$encrypt" -eq "1" ]]; then
+   cmd_out=`s3cmd --version`
+   if ! [[ $cmd_out =~ version ]]; then
+      echo "error: s3cmd not installed"
+      exit 1
+   fi
+fi
+
 total=0
 total_unenc=0
 pct_unenc=0
 sz=0
 
-trap "echo Exited!; exit;" SIGINT SIGTERM
+# first blacklist buckets that are too large (> 1 TB for example)
+if [[ "$bash4" -eq "1" ]]; then
+   declare -A blacklist
+
+   for i in \
+      "dummy1" \
+      "dummy2" \
+      ; do
+
+      blacklist[$i]="9"
+   done
+fi
 
 for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
    total=$((total + 1))
+
+   if [[ "$bash4" -eq "1" ]]; then
+      if [[ "9" -eq  "${blacklist[$i]}" ]]; then
+         echo "blacklisted: $i ..."
+         continue
+      fi
+   fi
+
    aws s3api get-bucket-encryption --bucket  $i >/dev/null 2>&1
    ret=$?
    if [ "$ret" -ne "0" ]; then
