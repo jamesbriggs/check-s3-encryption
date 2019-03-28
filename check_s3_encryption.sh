@@ -15,6 +15,8 @@
 
 report=1 # print summary report
 
+delay=1 # throttling interval between buckets (seconds)
+
 bash4=1 # only needed for blacklist feature. On Mac OS X, do `brew install bash` and update the shebang line at top of script to /usr/local/bin/bash if you need a blacklist.
 
 encrypt=0
@@ -26,7 +28,7 @@ max_encrypt=1000000000 # bytes
 
 trap "echo Exited!; exit;" SIGINT SIGTERM
 
-cmd_out=`aws --version`
+cmd_out=`aws --version 2>&1`
 if ! [[ $cmd_out =~ aws-cli ]]; then
    echo "error: aws cli not installed"
    exit 1
@@ -93,7 +95,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
       echo "$i,ret=$ret,$sz"
       total_unenc=$((total_unenc + 1))
    fi
-   sleep 1 # rate-limiting to avoid AWS API throttling (optional)
+   sleep $delay # rate-limiting to avoid AWS API throttling (optional)
 done
 
 if [ "$report" -eq "1" ]; then
