@@ -5,6 +5,7 @@
 # Author: James Briggs, USA
 # Env: bash
 # Usage: check_s3_encryption.sh
+# Link: https://github.com/jamesbriggs/check-s3-encryption
 # Note: if report=1 (see below), the unencrypted buckets report is printed in CSV format
 
 ###
@@ -12,6 +13,8 @@
 ###
 
 report=1
+encrypt=0
+max_encrypt=1000000000 # bytes
 
 ###
 ### end of user settings
@@ -20,6 +23,7 @@ report=1
 total=0
 total_unenc=0
 pct_unenc=0
+sz=0
 
 trap "echo Exited!; exit;" SIGINT SIGTERM
 
@@ -28,7 +32,18 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
    aws s3api get-bucket-encryption --bucket  $i >/dev/null 2>&1
    ret=$?
    if [ "$ret" -ne "0" ]; then
-      echo "$i,ret=$ret"
+
+      if [ "$encrypt" -ne "0" ]; then
+         sz=`s3cmd du s3://$i | cut -f1 -d ' '`
+         if [ "$sz" -lt "$max_encrypt" ]; then
+             echo "encrypting $i $sz bytes ..."
+             aws s3api put-bucket-encryption --bucket $i \
+                --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+             aws s3 cp s3://$i/ s3://$i/ --recursive --sse
+         fi
+      fi
+
+      echo "$i,ret=$ret,$sz"
       total_unenc=$((total_unenc + 1))
    fi
    sleep 1 # rate-limiting to avoid AWS API throttling (optional)
