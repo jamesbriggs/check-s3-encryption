@@ -7,6 +7,7 @@
 # Env: bash
 # Usage: check_s3_encryption.sh
 # Link: https://github.com/jamesbriggs/check-s3-encryption
+# Warning: "Copying the object over itself removes settings for storage-class and website-redirect-location. To maintain these settings in the new object, be sure to explicitly specify storage-class or website-redirect-location values in the copy request."
 # Note: if report=1 (see below), the unencrypted buckets report is printed in CSV format
 
 ###

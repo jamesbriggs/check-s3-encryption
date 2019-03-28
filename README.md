@@ -32,6 +32,10 @@ daily crontab entry:
 * s3cmd is needed if you enable encryption
 * tested on Linux and Mac OS X
 
+**Warning**
+
+"Copying the object over itself removes settings for storage-class and website-redirect-location. To maintain these settings in the new object, be sure to explicitly specify storage-class or website-redirect-location values in the copy request."
+
 **License**
 
 MIT License
