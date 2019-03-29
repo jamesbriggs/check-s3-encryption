@@ -28,6 +28,22 @@ bash4=1
 encrypt=0
 max_encrypt=1000000000 # bytes
 
+# when encrypt=1, optionally skip public buckets to preserve the original redirects and permissions
+skip_public_buckets=0
+
+# blacklist buckets that are too large (> 1 TB for example) (optional)
+if [[ "$bash4" -eq "1" ]]; then
+   declare -A blacklist
+
+   for i in \
+      "dummy199" \
+      "dummy299" \
+      ; do
+
+      blacklist[$i]="9"
+   done
+fi
+
 ###
 ### end of user settings
 ###
@@ -53,34 +69,26 @@ total_unenc=0
 pct_unenc=0
 sz=0
 
-# first blacklist buckets that are too large (> 1 TB for example)
-if [[ "$bash4" -eq "1" ]]; then
-   declare -A blacklist
-
-   for i in \
-      "dummy1" \
-      "dummy2" \
-      ; do
-
-      blacklist[$i]="9"
-   done
-fi
-
 for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
    total=$((total + 1))
 
    if [[ "$bash4" -eq "1" ]]; then
       if [[ "9" -eq  "${blacklist[$i]}" ]]; then
-         echo "blacklisted: $i ..."
+         echo "blacklisted: $i."
          continue
       fi
    fi
 
-   aws s3api get-bucket-encryption --bucket  $i >/dev/null 2>&1
+   aws s3api get-bucket-encryption --bucket $i >/dev/null 2>&1
    ret=$?
    if [ "$ret" -ne "0" ]; then
 
-      if [ "$encrypt" -ne "0" ]; then
+      if [ "$encrypt" -eq "1" ]; then
+
+         if [[ "$skip_public_buckets" -eq "1" ]]; then
+            (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) || continue
+         fi
+
          sz=`s3cmd du s3://$i | cut -f1 -d ' '`
          if [ "$sz" -lt "$max_encrypt" ]; then
              echo "encrypting $i $sz bytes ..."
@@ -89,11 +97,8 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
                 --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
              if [[ "$?" -eq "0" ]]; then
                 # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
-                aws s3 cp s3://$i/ s3://$i/ --recursive --sse
-                if [[ "$?" -ne "0" ]]; then
+                aws s3 cp s3://$i/ s3://$i/ --recursive --sse ||
                    echo "error: bucket self-copy failed. You must run it manually: aws s3 cp s3://$i/ s3://$i/ --recursive --sse"
-                   echo "info: continuing to next bucket ..."
-                fi
              fi
          fi
       fi
