@@ -86,7 +86,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
       if [ "$encrypt" -eq "1" ]; then
 
          if [[ "$skip_public_buckets" -eq "1" ]]; then
-            (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) || (echo "public: skipping $i; continue)
+            (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) || (echo "public: skipping $i"; continue)
          fi
 
          sz=`s3cmd du s3://$i | cut -f1 -d ' '`
