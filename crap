@@ -1,0 +1,1 @@
+grep zzz /etc/passwd || (echo "nf"; continue)
