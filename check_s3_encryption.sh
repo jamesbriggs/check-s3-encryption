@@ -10,8 +10,22 @@
 # Warning from AWS when using encryption feature:
 #    "Copying the object over itself removes settings for storage-class and website-redirect-location.
 #    To maintain these settings in the new object, be sure to explicitly specify storage-class or 
-#    website-redirect-location values in the copy request."
-# Note: if report=1 (see below), the unencrypted buckets report is printed in CSV format
+#    website-redirect-location values in the copy request." This is mainly an issue for Public buckets,
+#    which often have redirects and ACLs that are deleted when the encryption copy is applied. You can use the
+#    skip_public_buckets=0 option if safety is important.
+# Notes:
+#
+# - if report=1 (see below), the unencrypted buckets report is printed in CSV format
+# - this program uses the AWS CLI for various S3 bucket-related operations. If you also use Terraform to manage S3 buckets, then
+#   add this in the appropriate file locations:
+#
+#   server_side_encryption_configuration {
+#     rule {
+#       apply_server_side_encryption_by_default {
+#         sse_algorithm = "AES256"
+#       }
+#     }
+#   }
 
 ###
 ### start of user settings
