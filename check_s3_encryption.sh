@@ -103,6 +103,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
    sz=`$cmd | jq '.Datapoints[] | .Sum' | perl -ne '$n += $_; END { print 0+$n }'`
 
    if [ "$ret" -ne "0" ]; then
+      total_unenc=$((total_unenc + 1))
 
       if [ "$encrypt" -eq "1" ]; then
 
@@ -110,26 +111,24 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
             (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) && (echo "public: skipping $i"; continue)
          fi
 
-
          if [ "$sz" -lt "$max_encrypt" ]; then
-             echo "encrypting $i $sz bytes ..."
-             # mark bucket as an encrypted bucket
-             aws s3api put-bucket-encryption --bucket $i \
-                --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
-             if [[ "$?" -eq "0" ]]; then
-                # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
-                aws s3 cp s3://$i/ s3://$i/ --recursive --sse ||
-                   echo "error: bucket self-copy failed. You must run it manually: aws s3 cp s3://$i/ s3://$i/ --recursive --sse"
-             fi
+            echo "encrypting $i $sz bytes ..."
+            # mark bucket as an encrypted bucket
+            aws s3api put-bucket-encryption --bucket $i \
+               --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+            if [[ "$?" -eq "0" ]]; then
+               # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
+               aws s3 cp s3://$i/ s3://$i/ --recursive --sse ||
+                  echo "error: bucket self-copy failed. You must run it manually: aws s3 cp s3://$i/ s3://$i/ --recursive --sse"
+               total_unenc=$((total_unenc - 1))
+            fi
          fi
       fi
-
    fi
 
    sz=$(( $sz / $MB ))
 
    echo "$i,ret=$ret,$sz MB"
-   total_unenc=$((total_unenc + 1))
 
    sleep $delay # rate-limiting to avoid AWS API throttling (optional)
 done
