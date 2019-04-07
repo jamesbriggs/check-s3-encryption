@@ -66,6 +66,7 @@ fi
 trap "echo Exited!; exit;" SIGINT SIGTERM
 
 dt=`/bin/date +"%Y-%m-%d"`
+MB=1000000
 
 cmd_out=`aws --version 2>&1`
 if ! [[ $cmd_out =~ aws-cli ]]; then
@@ -96,6 +97,11 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
 
    aws s3api get-bucket-encryption --bucket $i >/dev/null 2>&1
    ret=$?
+   # sz=`s3cmd du s3://$i | cut -f1 -d ' '` # too slow on large buckets
+
+   cmd="aws cloudwatch get-metric-statistics --namespace AWS/S3 --start-time ${dt}T00:00:00 --end-time ${dt}T23:59:57 --period 86400 --statistics Sum --metric-name BucketSizeBytes --dimensions Name=BucketName,Value=$i Name=StorageType,Value=StandardStorage"
+   sz=`$cmd | jq '.Datapoints[] | .Sum' | perl -ne '$n += $_; END { print 0+$n }'`
+
    if [ "$ret" -ne "0" ]; then
 
       if [ "$encrypt" -eq "1" ]; then
@@ -104,10 +110,6 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
             (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) && (echo "public: skipping $i"; continue)
          fi
 
-         # sz=`s3cmd du s3://$i | cut -f1 -d ' '` # too slow on large buckets
-
-         cmd="aws cloudwatch get-metric-statistics --namespace AWS/S3 --start-time ${dt}T00:00:00 --end-time ${dt}T23:59:57 --period 86400 --statistics Sum --metric-name BucketSizeBytes --dimensions Name=BucketName,Value=com-amplitude-vacuum-disney Name=StorageType,Value=StandardStorage"
-         sz=`$cmd | jq '.Datapoints[] | .Sum' | perl -ne '$n += $_; END { print $n }'`
 
          if [ "$sz" -lt "$max_encrypt" ]; then
              echo "encrypting $i $sz bytes ..."
@@ -122,9 +124,13 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
          fi
       fi
 
-      echo "$i,ret=$ret,$sz"
-      total_unenc=$((total_unenc + 1))
    fi
+
+   sz=$(( $sz / $MB ))
+
+   echo "$i,ret=$ret,$sz MB"
+   total_unenc=$((total_unenc + 1))
+
    sleep $delay # rate-limiting to avoid AWS API throttling (optional)
 done
 
