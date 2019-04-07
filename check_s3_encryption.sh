@@ -1,21 +1,24 @@
 #!/bin/bash
 
 # Program: check_s3_encryption.sh
-# Purpose: check for unencrypted AWS S3 buckets and report and/or return exit status
+# Purpose: check for unencrypted AWS S3 buckets and report and/or return exit status. Optionally, encryption can be enabled.
 # Author: James Briggs, USA
-# Version: 1.0
+# Version: 1.1
 # Env: bash
 # Usage: check_s3_encryption.sh
 # Link: https://github.com/jamesbriggs/check-s3-encryption
+#
 # Warning from AWS when using encryption feature:
 #    "Copying the object over itself removes settings for storage-class and website-redirect-location.
 #    To maintain these settings in the new object, be sure to explicitly specify storage-class or 
 #    website-redirect-location values in the copy request." This is mainly an issue for Public buckets,
 #    which often have redirects and ACLs that are deleted when the encryption copy is applied. You can use the
 #    skip_public_buckets=0 option if safety is important.
+#
 # Notes:
 #
 # - if report=1 (see below), the unencrypted buckets report is printed in CSV format
+# - for best performance, run this program in the same region as your S3 buckets
 # - this program uses the AWS CLI for various S3 bucket-related operations. If you also use Terraform to manage S3 buckets, then
 #   add this in the appropriate file locations:
 #
@@ -40,7 +43,7 @@ delay=0 # throttling interval between buckets (seconds)
 bash4=1
 
 encrypt=0
-max_encrypt=100000000000 # bytes
+max_encrypt=500000000000 # bytes
 
 # when encrypt=1 above, optionally skip public buckets to preserve the original redirects and permissions
 skip_public_buckets=0
@@ -97,7 +100,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
 
    aws s3api get-bucket-encryption --bucket $i >/dev/null 2>&1
    ret=$?
-   # sz=`s3cmd du s3://$i | cut -f1 -d ' '` # too slow on large buckets
+   # sz=`s3cmd du s3://$i | cut -f1 -d ' '` # s3cmd is too slow on large buckets
 
    cmd="aws cloudwatch get-metric-statistics --namespace AWS/S3 --start-time ${dt}T00:00:00 --end-time ${dt}T23:59:57 --period 86400 --statistics Sum --metric-name BucketSizeBytes --dimensions Name=BucketName,Value=$i Name=StorageType,Value=StandardStorage"
    sz=`$cmd | jq '.Datapoints[] | .Sum' | perl -ne '$n += $_; END { print 0+$n }'`
