@@ -33,28 +33,29 @@
 
 report=1 # print summary report
 
-delay=1 # throttling interval between buckets (seconds)
+delay=0 # throttling interval between buckets (seconds)
 
 # bash4 is only needed for blacklist feature.
 # On Mac OS X, do `brew install bash` and update the shebang line at top of script to /usr/local/bin/bash if you need a blacklist.
 bash4=1
 
 encrypt=0
-max_encrypt=1000000000 # bytes
+max_encrypt=100000000000 # bytes
 
-# when encrypt=1, optionally skip public buckets to preserve the original redirects and permissions
+# when encrypt=1 above, optionally skip public buckets to preserve the original redirects and permissions
 skip_public_buckets=0
 
 # blacklist buckets that are too large (> 1 TB for example) (optional)
 if [[ "$bash4" -eq "1" ]]; then
    declare -A blacklist
+   declare -r CH_FILLER="9"
 
    for i in \
       "dummy199" \
       "dummy299" \
       ; do
 
-      blacklist[$i]="9"
+      blacklist[$i]=$CH_FILLER
    done
 fi
 
@@ -64,18 +65,18 @@ fi
 
 trap "echo Exited!; exit;" SIGINT SIGTERM
 
+dt=`/bin/date +"%Y-%m-%d"`
+
 cmd_out=`aws --version 2>&1`
 if ! [[ $cmd_out =~ aws-cli ]]; then
    echo "error: aws cli not installed"
    exit 1
 fi
 
-if [[ "$encrypt" -eq "1" ]]; then
-   cmd_out=`s3cmd --version`
-   if ! [[ $cmd_out =~ version ]]; then
-      echo "error: s3cmd not installed"
-      exit 1
-   fi
+cmd_out=`jq --version`
+if ! [[ $cmd_out =~ jq- ]]; then
+   echo "error: jq not installed"
+   exit 1
 fi
 
 total=0
@@ -87,7 +88,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
    total=$((total + 1))
 
    if [[ "$bash4" -eq "1" ]]; then
-      if [[ "9" -eq  "${blacklist[$i]}" ]]; then
+      if [[ "$CH_FILLER" -eq  "${blacklist[$i]}" ]]; then
          echo "blacklisted: $i."
          continue
       fi
@@ -100,10 +101,14 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
       if [ "$encrypt" -eq "1" ]; then
 
          if [[ "$skip_public_buckets" -eq "1" ]]; then
-            (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) || (echo "public: skipping $i"; continue)
+            (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) && (echo "public: skipping $i"; continue)
          fi
 
-         sz=`s3cmd du s3://$i | cut -f1 -d ' '`
+         # sz=`s3cmd du s3://$i | cut -f1 -d ' '` # too slow on large buckets
+
+         cmd="aws cloudwatch get-metric-statistics --namespace AWS/S3 --start-time ${dt}T00:00:00 --end-time ${dt}T23:59:57 --period 86400 --statistics Sum --metric-name BucketSizeBytes --dimensions Name=BucketName,Value=com-amplitude-vacuum-disney Name=StorageType,Value=StandardStorage"
+         sz=`$cmd | jq '.Datapoints[] | .Sum' | perl -ne '$n += $_; END { print $n }'`
+
          if [ "$sz" -lt "$max_encrypt" ]; then
              echo "encrypting $i $sz bytes ..."
              # mark bucket as an encrypted bucket

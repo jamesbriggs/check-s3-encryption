@@ -10,7 +10,7 @@ CLI:
 ```
 $ check_s3_encryption.sh
 
-test,ret=255
+test,ret=255,0
 
 total buckets=10
 total unencrypted buckets=1
@@ -22,19 +22,21 @@ echo $?
 
 daily crontab entry:
 ```
-1 1 * * * check_s3_encryption.sh
+1 1 * * * /path/check_s3_encryption.sh
 ```
 
 **Requirements**
 
-* AWS CLI tools must be installed and reachable via $PATH
+* current AWS CLI tools must be installed and reachable via $PATH
 * ~/.aws must be configured with config and credentials files
-* s3cmd is needed if you enable encryption
+* jq is needed to calculate bucket sizes
 * tested on Linux and Mac OS X
 
 **Warning**
 
 "Copying the object over itself removes settings for storage-class and website-redirect-location. To maintain these settings in the new object, be sure to explicitly specify storage-class or website-redirect-location values in the copy request."
+
+Use at your own risk - if you enable encrypt=1, there is considerable risk of dropping redirects and permissions.
 
 **License**
 
