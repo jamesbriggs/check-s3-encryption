@@ -126,7 +126,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
       fi
    fi
 
-   sz=$(( $sz / $MB ))
+   sz=$((sz / MB))
 
    echo "$i,ret=$ret,$sz MB"
 
@@ -135,7 +135,7 @@ done
 
 if [ "$report" -eq "1" ]; then
    if [ "$total" -ne "0" ]; then
-      pct_unenc=$((100 * total_unenc / $total))
+      pct_unenc=$((100 * total_unenc / total))
    fi
 
    echo
