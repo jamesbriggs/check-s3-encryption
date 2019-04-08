@@ -68,8 +68,6 @@ fi
 
 trap "echo Exited!; exit;" SIGINT SIGTERM
 
-CH_FILLER="9"
-
 dt=`/bin/date +"%Y-%m-%d"`
 MB=1000000
 
