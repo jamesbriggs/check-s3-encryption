@@ -48,7 +48,7 @@ max_encrypt=500000000000 # bytes
 # when encrypt=1 above, optionally skip public buckets to preserve the original redirects and permissions
 skip_public_buckets=0
 
-# blacklist buckets that are too large (> 1 TB for example) (optional)
+# blacklist buckets that are unnecessary or too large (> 1 TB for example) (optional)
 if [[ "$bash4" -eq "1" ]]; then
    declare -A blacklist
    declare -r CH_FILLER="9"
@@ -123,7 +123,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
          fi
 
 # 5. See if bucket is small enough to encrypt
-         if [ "$sz" -lt "$max_encrypt" ]; then
+         if [[ "$sz" -ne "0" && "$sz" -le "$max_encrypt" ]]; then
             echo "encrypting $i $sz bytes ..."
             # mark bucket as an encrypted bucket
             aws s3api put-bucket-encryption --bucket $i \

@@ -4,6 +4,8 @@
 
 Check for AWS S3 buckets that are not encrypted and optionally encrypt them with SSE AES256, print a report in CSV format and exit with status.
 
+For faster results with large buckets (> 10 GB) or millions of files, run from linux `screen` an an instance in the same AWS AZ as your S3 buckets.
+
 **Usage**
 
 CLI:
@@ -15,6 +17,7 @@ test,ret=255,0
 total buckets=10
 total unencrypted buckets=1
 percent unencrypted=10%
+total blacklisted buckets=0
 
 echo $?
 1
