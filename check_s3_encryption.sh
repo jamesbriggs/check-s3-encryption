@@ -86,34 +86,41 @@ fi
 total=0
 total_unenc=0
 pct_unenc=0
+total_blacklisted=0
 sz=0
 
 for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
-   total=$((total + 1))
+   ((total++))
 
    if [[ "$bash4" -eq "1" ]]; then
       if [[ "$CH_FILLER" -eq  "${blacklist[$i]}" ]]; then
          echo "blacklisted: $i."
+         ((total_blacklisted++))
          continue
       fi
    fi
 
+# 1. Get the buckets's encryption status (we do not look at individual files)
    aws s3api get-bucket-encryption --bucket $i >/dev/null 2>&1
    ret=$?
+
+# 2. Get the bucket size
    # sz=`s3cmd du s3://$i | cut -f1 -d ' '` # s3cmd is too slow on large buckets
 
    cmd="aws cloudwatch get-metric-statistics --namespace AWS/S3 --start-time ${dt}T00:00:00 --end-time ${dt}T23:59:57 --period 86400 --statistics Sum --metric-name BucketSizeBytes --dimensions Name=BucketName,Value=$i Name=StorageType,Value=StandardStorage"
    sz=`$cmd | jq '.Datapoints[] | .Sum' | perl -ne '$n += $_; END { print 0+$n }'`
 
    if [ "$ret" -ne "0" ]; then
-      total_unenc=$((total_unenc + 1))
-
+      ((total_unenc++))
+# 3. See if bucket encryption was configured
       if [ "$encrypt" -eq "1" ]; then
 
+# 4. See if public buckets are to be skipped and then check for public
          if [[ "$skip_public_buckets" -eq "1" ]]; then
             (aws s3api get-bucket-acl --output text --bucket $i | grep -q http://acs.amazonaws.com/groups/global/AllUsers) && (echo "public: skipping $i"; continue)
          fi
 
+# 5. See if bucket is small enough to encrypt
          if [ "$sz" -lt "$max_encrypt" ]; then
             echo "encrypting $i $sz bytes ..."
             # mark bucket as an encrypted bucket
@@ -123,7 +130,7 @@ for i in `aws s3api list-buckets --query "Buckets[].Name" --output text`; do
                # copy bucket to itself to encrypt old files with standard SSE AES256 encryption
                aws s3 cp s3://$i/ s3://$i/ --recursive --sse ||
                   echo "error: bucket self-copy failed. You must run it manually: aws s3 cp s3://$i/ s3://$i/ --recursive --sse"
-               total_unenc=$((total_unenc - 1))
+               ((total_unenc--))
             fi
          fi
       fi
@@ -145,6 +152,7 @@ if [ "$report" -eq "1" ]; then
    echo "total buckets=$total"
    echo "total unencrypted buckets=$total_unenc"
    echo "percent unencrypted=$pct_unenc%"
+   echo "total blacklisted buckets=$total_blacklisted"
 fi
 
 trap - SIGINT SIGTERM
