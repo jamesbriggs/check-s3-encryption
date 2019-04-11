@@ -68,7 +68,15 @@ fi
 
 trap "echo Exited!; exit;" SIGINT SIGTERM
 
-dt=`/bin/date +"%Y-%m-%d"`
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+   dt=`/bin/date --date="1 day ago" +"%Y-%m-%d"`
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+   dt=$(/bin/date -v -1d '+%Y-%m-%d')
+else
+   echo "error: unable to identify correct date command"
+   exit 1
+fi
+
 MB=1000000
 
 cmd_out=`aws --version 2>&1`
